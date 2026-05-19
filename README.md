@@ -10,14 +10,16 @@ Machine learning system to predict whether water is safe to drink based on physi
 water_quality_prediction/
 ├── data/                    # water_potability.csv (not in git — download separately)
 ├── notebooks/
-│   ├── 01_eda.ipynb         # M1: Setup & dataset loading
-│   ├── 02_preprocessing.ipynb
-│   ├── 03_model_training.ipynb
-│   ├── 04_evaluation.ipynb
-│   └── 05_prediction.ipynb
-├── models/                  # Saved model artifacts (.pkl)
-├── reports/figures/         # Generated plots
-└── app/                     # Optional Flask prediction API
+│   ├── 01_eda.ipynb         # EDA — distributions, correlations, outlier analysis
+│   ├── 02_preprocessing.ipynb  # Imputation, Winsorisation, scaling
+│   ├── 03_model_training.ipynb # LR, RF, XGBoost, MLP training
+│   ├── 04_evaluation.ipynb     # Confusion matrices, ROC curves, feature importance
+│   └── 05_prediction.ipynb     # End-to-end prediction pipeline
+├── models/                  # Saved model artifacts (.pkl) and training_metrics.json
+├── reports/figures/         # All 21 generated plots and diagrams
+├── app/
+│   └── predict.py           # Flask REST API — POST /predict
+└── run_tests.py             # Runs all 25 milestone tests
 ```
 
 ## Setup
@@ -28,8 +30,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-> **macOS note:** XGBoost requires OpenMP. If `import xgboost` fails, run `brew install libomp`.  
-> The `requirements.txt` pins `xgboost==1.7.6` which bundles its own libomp and avoids this issue.
+> **macOS note:** `requirements.txt` pins `xgboost==1.7.6` which bundles its own OpenMP library — no `brew install libomp` needed.
 
 ## Dataset
 
@@ -59,6 +60,28 @@ Open notebooks in order: `01_eda` → `02_preprocessing` → `03_model_training`
 | XGBoost | ~69% |
 | Neural Network (MLP) | ~66% |
 
+## Flask Prediction API
+
+```bash
+pip install flask
+python3 app/predict.py        # starts on http://localhost:5000
+```
+
+```bash
+curl -X POST http://localhost:5000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"ph":7.0,"Hardness":204.0,"Solids":20791.0,"Chloramines":7.3,
+       "Sulfate":368.5,"Conductivity":564.0,"Organic_carbon":10.4,
+       "Trihalomethanes":86.0,"Turbidity":2.96}'
+# {"potability":0,"label":"Unsafe","confidence":0.3821,"threshold":0.44}
+```
+
+## Running Tests
+
+```bash
+python3 run_tests.py          # all 25 milestone tests
+```
+
 ## Key Finding
 
-The dataset has a class imbalance (~61% unsafe, ~39% safe), so accuracy alone is misleading. F1-score and ROC-AUC are the metrics that matter.
+The dataset has a class imbalance (~61% unsafe, ~39% safe), so accuracy alone is misleading. F1-score and ROC-AUC are the primary evaluation metrics. Best model: XGBoost at threshold 0.44 — F1=0.558, AUC=0.652.
